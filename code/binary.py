@@ -58,7 +58,7 @@ class model():
 
 if __name__ == "__main__":
     
-    origin_train_data = pd.read_csv("/Users/wzk1998/Desktop/AllCode/My_machineLearning/binary_recognition/digit-recognizer/train.csv",header=0)
+    origin_train_data = pd.read_csv("./data/digit-recognizer/train.csv",header=0)
     train_data = origin_train_data.values;
     train_imgs = train_data[0:,1:]
     train_labels = train_data[:,0]
@@ -74,11 +74,3 @@ if __name__ == "__main__":
     out = m.predict(test_imgs)
 
     m.makeVision(test_imgs,out);
-
-
-    
-
-
-    
-
-    
