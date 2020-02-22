@@ -13,16 +13,12 @@ class TreeNode(object):
             -------------------------
         '''
         self.node_type = node_type;          #记录叶节点的类型
-        self.child = [2];                   #记录每一个特征的两个分类。
+        self.childs = {};                   #记录每一个特征的两个分类。
         self.feature = feature;             #记录这个叶节点基于哪一个特征进行分类
         self.Class = Class;                #最终分类
 
-    def add_child_0(self,index,treeNode):
-        self.child[index] = treeNode;
-        return;
-
-    def add_child_1(self,treeNode):
-        self.child_1 = treeNode;
+    def add_child(self,index,TreeNode):
+        self.childs[index] = TreeNode;
 
     def predict(self,inputs):
         if self.node_type == "leaf":
