@@ -25,29 +25,26 @@ class SVM_model(object):
         self.n = feature.shape[1]               #特征长度
         self.featureNum = feature.shape[0]        #特征数量
         self.C = 1000
-        self.X = feature
-        self.Y = label
+        self.X = np.array(feature,dtype = np.float32)
+        self.Y = np.array(label,dtype = np.float32)
         self.b = 0.0
-        self.alpha = np.zeros((feature.shape[0],1));
-        print("featureNum = ",self.featureNum);
-        print("alpha shape:",self.alpha.shape)
+        self.alpha = np.zeros((self.featureNum,1));
         self.kernel = kernel
         self.eps = 1e-5;
-        self.E = np.array([self.getE(i) for i in range(len(feature))]).reshape(len(feature),1)
+        self.E = np.array([self.getE(i) for i in range(len(feature))],dtype= np.float32).reshape(len(feature),1)
 
         
 
     def judge_KKT(self,index):
 
-        yGx = self.Y[index,0]*self.getG(index);
+        yGx = self.Y[index,0] * self.getG(index);
 
-        if(abs(self.alpha[index,0])<self.eps):
-            return  yGx>1 or abs(yGx-1)<self.eps;
-        
-        elif(abs(self.alpha[index,0]-self.C)<self.eps):
-            return yGx<1 or abs(yGx-self.C)<self.eps
+        if (abs(self.alpha[index,0])<self.eps):
+            return yGx > 1 or yGx == 1
+        elif (abs(self.alpha[index,0]-self.C)<self.eps):
+            return yGx < 1 or yGx == 1
         else:
-            return abs(yGx-1)<self.eps;
+            return abs(yGx-1) < self.eps
 
     def isStop(self):
         '''
@@ -89,7 +86,11 @@ class SVM_model(object):
             for j in list_re:
                 if(index == j) :
                     continue;
+                
                 temp = abs(self.getE(j)-self.getE(index))
+                print("Ej = ",self.getE(j))
+                print("E index = ",self.getE(index))
+                print("temp = ",temp);
                 if(temp>mmax):
                     mmax = temp;
                     maxindex = j;
@@ -117,6 +118,7 @@ class SVM_model(object):
             result += self.alpha[j,0]*self.Y[j,0]*self.k_kernel(self.X[index],self.X[j]);
         
         result += self.b;
+        print("result = ",result);
         return result;
 
     def getE(self,index):
@@ -135,16 +137,22 @@ class SVM_model(object):
                 return;
             
             i_1,i_2 = self.select_alpha();
+            print("i1 = {},i2 = {}".format(i_1,i_2))
 
-            L = max(0,self.alpha[i_2,0]-self.alpha[i_1,0])
-            H = min(self.C,self.C + self.alpha[i_2,0] - self.alpha[i_1,0])
+            if(self.Y[i_1,0] != self.Y[i_2,0]):
+                L = max(0,self.alpha[i_2,0]-self.alpha[i_1,0])
+                H = min(self.C,self.C + self.alpha[i_2,0] - self.alpha[i_1,0])
+            if(self.Y[i_1,0] == self.Y[i_2,0]):
+                L = max(0,self.alpha[i_2]+self.alpha[i_1]-self.C)
+                H = min(self.C,self.alpha[i_2,0]+self.alpha[i_1,0])
+
             K11 = self.k_kernel(self.X[i_1],self.X[i_1])
-            K22 = self.k_kernel(self.X[i_1],self.X[i_2])
+            K22 = self.k_kernel(self.X[i_2],self.X[i_2])
             K12 = self.k_kernel(self.X[i_1],self.X[i_2])
 
             beta = K11 + K22 - 2*K12
 
-            a2New =  self.alpha[i_2,0] + self.Y[i_2,0]*(self.E[i_2,0]-self.E[i_1,0])/beta;
+            a2New =  self.alpha[i_2,0] + self.Y[i_2,0]*(self.E[i_1,0]-self.E[i_2,0])/beta;
 
             if(a2New > H):
                 a2New = H;
@@ -163,13 +171,47 @@ class SVM_model(object):
             else:
                 bNew = b1New + b2New
             
-
+            
+            print("a1New = {}, a2New = {}, bNew = {}".format(a1New,a2New,bNew))
             self.alpha[i_1,0] = a1New;
             self.alpha[i_2,0] = a2New;
             self.b = bNew;
 
             self.E[i_1,0] = self.getE(i_1);
             self.E[i_2,0] = self.getE(i_2);
+
+
+    def getPrediction(self,x):
+        '''
+        x是一个向量
+        '''
+        result = 0.0;
+        for i in range(self.featureNum):
+            result += self.alpha[i,0]*self.Y[i,0]*self.k_kernel(x,self.X[i]);
+        
+        result += self.b;
+        print("result = ",result);
+        if(result>0):
+            return 1;
+        return -1;
+    
+    def predict(self,feature):
+
+        out = []
+        for i in range(feature.shape[0]):
+            pre = self.getPrediction(feature[i]);
+            out.append(pre);
+        
+        return out;
+        
+    def acc(self,out,label):
+        num = 0.0;
+        for i in range(len(out)):
+            if(out[i] == label[i,0]):
+                num+=1;
+
+        print("acc is : {}%".format(num/len(out)*100))
+
 
     
 
@@ -187,10 +229,13 @@ if __name__ == "__main__":
     train_label = np.array(train_label).reshape(len(train_label),1)
     test_set = np.array(test_set)
     test_label = np.array(test_label).reshape(len(test_label),1)
-    print(train_set.shape)
-    print(train_label.shape)
     svm = SVM_model(train_set,train_label);
-    svm.train(num_epoch=10)
+    out = svm.getE(1);
+    print(out);
+
+    # svm.train(num_epoch=10)
+    # out = svm.predict(test_set);
+    # svm.acc(out,test_label);
     
     
 
